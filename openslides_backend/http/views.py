@@ -46,6 +46,18 @@ class BaseView:
         self.logger.debug(f"User id is {user_id}.")
         return user_id, access_token
 
+    def dispatch(self, body: RequestBody, headers: Headers, route: str) -> Tuple[ResponseBody, str]:
+        """
+        Dispatches request to the viewpoint. To be overriden in subclasses.
+        """
+        raise NotImplementedError()
+
+    def get_health_info(self) -> Dict[str, Any]:
+        """
+        Returns some status information. HTTP method is ignored. To be overriden in subclasses.
+        """
+        raise NotImplementedError()
+
 
 class ActionView(BaseView):
     """
@@ -55,10 +67,7 @@ class ActionView(BaseView):
 
     method = "POST"
 
-    def dispatch(self, body: RequestBody, headers: Headers) -> Tuple[ResponseBody, str]:
-        """
-        Dispatches request to the viewpoint.
-        """
+    def dispatch(self, body: RequestBody, headers: Headers, route: str) -> Tuple[ResponseBody, str]:
         self.logger.debug("Start dispatching action request.")
 
         # Get user id.
@@ -70,7 +79,7 @@ class ActionView(BaseView):
         # Handle request.
         handler: Action = ActionHandler(logging=self.logging, services=self.services)
         try:
-            result = handler.handle_request(payload, user_id)
+            result = handler.handle_request(payload, user_id, route)
         except (ActionException, DatabaseException) as exception:
             raise ViewException(exception.message, status_code=400)
         except PermissionDenied as exception:
@@ -80,9 +89,6 @@ class ActionView(BaseView):
         return result, access_token
 
     def get_health_info(self) -> Dict[str, Any]:
-        """
-        Returns some status information. HTTP method is ignored.
-        """
         return {"actions": dict(ActionHandler.get_actions_dev_status())}
 
 
@@ -95,9 +101,6 @@ class PresenterView(BaseView):
     method = "POST"
 
     def dispatch(self, body: RequestBody, headers: Headers) -> Tuple[ResponseBody, str]:
-        """
-        Dispatches request to the viewpoint.
-        """
         self.logger.debug("Start dispatching presenter request.")
 
         # Get user_id.
@@ -118,7 +121,4 @@ class PresenterView(BaseView):
         return presenter_response, access_token
 
     def get_health_info(self) -> Dict[str, Any]:
-        """
-        Returns some status information. HTTP method is ignored.
-        """
         return {"status": "unkown"}

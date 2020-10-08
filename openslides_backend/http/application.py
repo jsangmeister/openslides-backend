@@ -11,6 +11,7 @@ from ..services.authentication import AUTHENTICATION_HEADER
 from ..shared.exceptions import ViewException
 from ..shared.interfaces import StartResponse, WSGIEnvironment
 from .http_exceptions import BadRequest, Forbidden, HTTPException, MethodNotAllowed
+from .views import BaseView
 
 health_route = re.compile("^/health$")
 
@@ -30,7 +31,7 @@ class OpenSlidesBackendWSGIApplication:
     During initialization we bind injected dependencies to the instance.
     """
 
-    def __init__(self, logging: Any, view: Any, services: Any) -> None:
+    def __init__(self, logging: Any, view: BaseView, services: Any) -> None:
         self.logging = logging
         self.logger = logging.getLogger(__name__)
         self.logger.debug("Initialize OpenSlides Backend WSGI application.")
@@ -43,6 +44,7 @@ class OpenSlidesBackendWSGIApplication:
         object or a HTTPException (or a subclass of it). Both are WSGI
         applications themselves.
         """
+        breakpoint()
         if health_route.match(request.environ["RAW_URI"]):
             return self.health_info(request)
         return self.default_route(request)
@@ -67,11 +69,14 @@ class OpenSlidesBackendWSGIApplication:
             return BadRequest(exception.description)
         self.logger.debug(f"Request contains JSON: {request_body}.")
 
+        # check if request is internal
+        is_internal = request.environ["RAW_URI"]
+
         # Dispatch view and return response.
         view_instance = self.view(self.logging, self.services)
         try:
             response_body, access_token = view_instance.dispatch(
-                request_body, request.headers
+                request_body, request.headers, request.environ["RAW_URI"]
             )
         except ViewException as exception:
             if exception.status_code == 400:

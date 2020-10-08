@@ -8,7 +8,7 @@ from ..generics import CreateAction
 from ..register import register_action
 
 
-@register_action("agenda_item.create")
+@register_action("agenda_item.create", internal=True)
 class AgendaItemCreate(CreateAction):
     """
     Action to create agenda items.

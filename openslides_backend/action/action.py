@@ -65,7 +65,7 @@ class ActionHandler(HandlerBase):
             else:
                 yield name, action.schema
 
-    def handle_request(self, payload: Payload, user_id: int) -> List[ActionResult]:
+    def handle_request(self, payload: Payload, user_id: int, route: str) -> List[ActionResult]:
         """
         Takes payload and user id and handles this request by validating and
         parsing all actions. In the end it sends everything to the event store.
