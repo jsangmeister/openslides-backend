@@ -16,10 +16,7 @@ class UpdateAction(Action):
         instance = self.validate_fields(instance)
         instance = self.update_instance(instance)
         fqid = FullQualifiedId(self.model.collection, instance["id"])
-        if fqid in self.datastore.additional_relation_models:
-            self.datastore.additional_relation_models[fqid].update(instance)
-        else:
-            self.datastore.additional_relation_models[fqid] = instance
+        self.apply_instance(instance)
 
         instance = self.validate_relation_fields(instance)
 
@@ -37,7 +34,7 @@ class UpdateAction(Action):
             if equal_field_name not in instance
         ]
         if missing_fields:
-            db_instance = self.fetch_model(
+            db_instance = self.datastore.fetch_model(
                 FullQualifiedId(self.model.collection, instance["id"]), missing_fields
             )
         else:

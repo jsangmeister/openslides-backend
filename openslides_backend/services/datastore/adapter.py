@@ -425,6 +425,12 @@ class DatastoreAdapter(DatastoreService):
         command = commands.TruncateDb()
         self.logger.debug("Start TRUNCATE_DB request to datastore")
         self.retrieve(command)
+    
+    def update_additional_models(self, fqid: FullQualifiedId, instance: Dict[str, Any], replace: bool = False) -> None:
+        if replace:
+            self.additional_relation_models[fqid] = instance
+        else:
+            self.additional_relation_models[fqid].update(instance)
 
     def fetch_model(
         self,
@@ -433,7 +439,7 @@ class DatastoreAdapter(DatastoreService):
         position: int = None,
         get_deleted_models: DeletedModelsBehaviour = DeletedModelsBehaviour.NO_DELETED,
         lock_result: bool = False,
-        db_additional_relevance: InstanceAdditionalBehaviour = InstanceAdditionalBehaviour.ONLY_DBINST,
+        db_additional_relevance: InstanceAdditionalBehaviour = InstanceAdditionalBehaviour.ADDITIONAL_BEFORE_DBINST,
         exception: bool = True,
     ) -> Dict[str, Any]:
         datastore_exception: Optional[DatastoreException] = None
@@ -446,14 +452,14 @@ class DatastoreAdapter(DatastoreService):
                     == (get_deleted_models == DeletedModelsBehaviour.ONLY_DELETED)
                 )
             ):
-                return (
-                    True,
-                    {
-                        field: self.additional_relation_models[fqid].get(field)
-                        for field in mapped_fields
-                        if field in self.additional_relation_models[fqid]
-                    },
-                )
+                complete = True
+                instance = {}
+                for field in mapped_fields:
+                    if field in self.additional_relation_models[fqid]:
+                        instance[field] = self.additional_relation_models[fqid][field]
+                    else:
+                        complete = False
+                return (complete, instance)
             else:
                 return (False, {})
 
@@ -477,13 +483,21 @@ class DatastoreAdapter(DatastoreService):
             InstanceAdditionalBehaviour.ONLY_ADDITIONAL,
             InstanceAdditionalBehaviour.ADDITIONAL_BEFORE_DBINST,
         ):
-            okay, result = get_additional()
+            complete, result = get_additional()
+            okay = bool(result)
             if (
-                not okay
+                not complete
                 and db_additional_relevance
                 == InstanceAdditionalBehaviour.ADDITIONAL_BEFORE_DBINST
             ):
+                cache_okay = okay
+                cache_result = result
                 okay, result, datastore_exception = get_db()
+                if okay:
+                    result = {**result, **cache_result}
+                elif cache_okay:
+                    okay = True
+                    result = cache_result
         else:
             okay, result, datastore_exception = get_db()
             if (
