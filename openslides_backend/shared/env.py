@@ -49,6 +49,10 @@ class Environment:
         "VOTE_PATH": "/internal/vote",
         "VOTE_PORT": "9013",
         "VOTE_PROTOCOL": "http",
+        "MESSAGE_BUS_PROTOCOL": "redis",
+        "MESSAGE_BUS_HOST": "redis",
+        "MESSAGE_BUS_PORT": "6379",
+        "MESSAGE_BUS_PATH": "/",
     }
 
     def __init__(self, os_env: Any, *args: Any, **kwargs: Any) -> None:
@@ -86,7 +90,7 @@ class Environment:
     def get_service_url(self) -> Dict[str, str]:
         service_url = {}
         # Extend the vars attribute with the lower case properties for the service URLs.
-        for service in ("datastore_reader", "datastore_writer", "media", "vote"):
+        for service in ("datastore_reader", "datastore_writer", "media", "message_bus", "vote"):
             key = service + "_url"
             service_url[key] = self.get_endpoint(service.upper())
         return service_url

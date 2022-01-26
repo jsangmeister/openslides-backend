@@ -1,4 +1,14 @@
-from typing import Any, Dict, Iterable, List, Literal, Optional, TypedDict, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Literal,
+    Optional,
+    TypedDict,
+    Union,
+)
 
 # the list of action data that is processed in a single action call
 ActionData = Iterable[Dict[str, Any]]
@@ -25,3 +35,5 @@ ActionsResponse = TypedDict(
     "ActionsResponse",
     {"success": bool, "message": str, "results": ActionsResponseResults},
 )
+
+OnSuccessCallable = Callable[[], None]

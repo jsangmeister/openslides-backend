@@ -31,7 +31,7 @@ from ..motion.update import RECOMMENDATION_EXTENSION_REFERENCE_IDS_PATTERN
 from ..user.user_mixin import LimitOfUserMixin
 
 
-@register_action("meeting.import")
+@register_action("meeting.import", threaded=True)
 class MeetingImport(SingularActionMixin, LimitOfUserMixin, Action):
     """
     Action to import a meeting.

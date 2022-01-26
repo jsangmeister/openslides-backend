@@ -8,6 +8,8 @@ from .services.auth.adapter import AuthenticationHTTPAdapter
 from .services.datastore.extended_adapter import ExtendedDatastoreAdapter
 from .services.datastore.http_engine import HTTPEngine
 from .services.media.adapter import MediaServiceAdapter
+from .services.message_bus.redis_adapter import RedisAdapter
+from .services.thread_manager.thread_manager_service import ThreadManagerService
 from .services.vote.adapter import VoteAdapter
 from .shared.env import Environment
 from .shared.interfaces.logging import LoggingModule
@@ -29,6 +31,8 @@ class OpenSlidesBackendServices(containers.DeclarativeContainer):
     )
     datastore = providers.Factory(ExtendedDatastoreAdapter, engine, logging, env)
     vote = providers.Singleton(VoteAdapter, config.vote_url, logging)
+    message_bus = providers.Singleton(RedisAdapter, config.message_bus_url, logging)
+    thread_manager = providers.Singleton(ThreadManagerService, message_bus)
 
 
 class OpenSlidesBackendWSGI(containers.DeclarativeContainer):

@@ -1,8 +1,20 @@
 from copy import deepcopy
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar, cast
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    cast,
+)
 
 import fastjsonschema
 
+from ..services.datastore.interface import DatastoreService
 from ..shared.exceptions import (
     ActionException,
     DatastoreLockedException,
@@ -15,14 +27,17 @@ from ..shared.interfaces.services import Services
 from ..shared.interfaces.write_request import WriteRequest
 from ..shared.schema import schema_version
 from . import actions  # noqa
+from .action import Action
 from .relations.relation_manager import RelationManager
 from .util.action_type import ActionType
 from .util.actions_map import actions_map
 from .util.typing import (
+    ActionData,
     ActionError,
     ActionResults,
     ActionsResponse,
     ActionsResponseResults,
+    OnSuccessCallable,
     Payload,
     PayloadElement,
 )
@@ -58,15 +73,15 @@ payload_schema = fastjsonschema.compile(
     }
 )
 
+MAX_RETRY = 3
+
 
 class ActionHandler(BaseHandler):
     """
     Action handler. It is the concrete implementation of Action interface.
     """
 
-    MAX_RETRY = 3
-
-    on_success: List[Callable[[], None]]
+    on_success: List[OnSuccessCallable]
 
     def __init__(self, env: Env, services: Services, logging: LoggingModule) -> None:
         super().__init__(env, services, logging)
@@ -107,6 +122,36 @@ class ActionHandler(BaseHandler):
         except fastjsonschema.JsonSchemaException as exception:
             raise ActionException(exception.message)
 
+        # check if only a single action is called
+        if len(payload) == 1:
+            ActionClass = self.get_action_class(payload[0]["action"])
+            # if threaded, start separately in a thread
+            if ActionClass.threaded:
+                action = self.get_action_instance(
+                    ActionClass, None, self.datastore.clone()
+                )
+                action_data = deepcopy(payload[0]["data"])
+
+                def threaded_function() -> Optional[ActionResults]:
+                    write_request, results, on_success = self.try_perform_action(
+                        action, action_data
+                    )
+                    if write_request:
+                        action.datastore.write(write_request)
+                    if on_success:
+                        on_success()
+                    return results
+
+                uuid = self.services.thread_manager().start_threaded_function(
+                    threaded_function
+                )
+                self.logger.debug(f"Thread started: {uuid}")
+                return ActionsResponse(
+                    success=True,
+                    message="Thread started successfully",
+                    results=[[{"uuid": uuid}]],
+                )
+
         results: ActionsResponseResults = []
         if atomic:
             results = self.execute_write_requests(self.parse_actions, payload)
@@ -142,6 +187,7 @@ class ActionHandler(BaseHandler):
         self,
         get_write_requests: Callable[..., Tuple[List[WriteRequest], T]],
         *args: Any,
+        max_retries: int = MAX_RETRY,
     ) -> T:
         retries = 0
         while True:
@@ -152,7 +198,7 @@ class ActionHandler(BaseHandler):
                 return data
             except DatastoreLockedException as exception:
                 retries += 1
-                if retries >= self.MAX_RETRY:
+                if retries >= max_retries:
                     raise ActionException(exception.message)
                 else:
                     self.datastore.reset()
@@ -203,41 +249,40 @@ class ActionHandler(BaseHandler):
         action_payload_element: PayloadElement,
         relation_manager: Optional[RelationManager] = None,
     ) -> Tuple[Optional[WriteRequest], Optional[ActionResults]]:
-        action_name = action_payload_element["action"]
-        ActionClass = actions_map.get(action_name)
-        if ActionClass is None or (
-            ActionClass.action_type == ActionType.BACKEND_INTERNAL
-            and not self.env.is_dev_mode()
-        ):
-            raise View400Exception(f"Action {action_name} does not exist.")
-        if not relation_manager:
-            relation_manager = RelationManager(self.datastore)
-
-        self.logger.debug(f"Perform action {action_name}.")
-        action = ActionClass(
-            self.services, self.datastore, relation_manager, self.logging
-        )
+        ActionClass = self.get_action_class(action_payload_element["action"])
+        action = self.get_action_instance(ActionClass, relation_manager)
         action_data = deepcopy(action_payload_element["data"])
 
+        self.logger.debug(f"Perform action {ActionClass.name}.")
+        write_request, results, on_success = self.try_perform_action(
+            action, action_data
+        )
+        if on_success:
+            self.on_success.append(on_success)
+        return (write_request, results)
+
+    def try_perform_action(
+        self, action: Action, action_data: ActionData
+    ) -> Tuple[
+        Optional[WriteRequest], Optional[ActionResults], Optional[OnSuccessCallable]
+    ]:
         try:
-            with self.datastore.get_database_context():
-                write_request, results = action.perform(
-                    action_data, self.user_id, internal=self.internal
-                )
+            write_request, results = action.perform(
+                action_data, self.user_id, internal=self.internal
+            )
             if write_request:
                 action.validate_required_fields(write_request)
 
                 # add locked_fields to request
-                write_request.locked_fields = self.datastore.locked_fields
-                # reset locked fields, but not changed models - these might be needed
+                write_request.locked_fields = action.datastore.locked_fields
+                # reset locked fields, but not addtional relation models - these might be needed
                 # by another action
-                self.datastore.locked_fields = {}
+                action.datastore.locked_fields = {}
 
-            # add on_success routine
-            if on_success := action.get_on_success(action_data):
-                self.on_success.append(on_success)
+            # get on_success routine
+            on_success = action.get_on_success(action_data)
 
-            return (write_request, results)
+            return (write_request, results, on_success)
         except ActionException as exception:
             self.logger.debug(
                 f"Error occured on index {action.index}: {exception.message}"
@@ -246,3 +291,29 @@ class ActionHandler(BaseHandler):
             if action.index > -1:
                 exception.action_data_error_index = action.index
             raise exception
+
+    def get_action_class(
+        self,
+        action_name: str,
+    ) -> Type[Action]:
+        ActionClass = actions_map.get(action_name)
+        if ActionClass is None or (
+            ActionClass.action_type == ActionType.BACKEND_INTERNAL and not self.env.is_dev_mode()
+        ):
+            raise View400Exception(f"Action {action_name} does not exist.")
+        return ActionClass
+
+    def get_action_instance(
+        self,
+        ActionClass: Type[Action],
+        relation_manager: Optional[RelationManager] = None,
+        datastore: Optional[DatastoreService] = None,
+    ) -> Action:
+        if not relation_manager:
+            if not datastore:
+                datastore = self.datastore
+            relation_manager = RelationManager(datastore)
+        action = ActionClass(
+            self.services, self.datastore, relation_manager, self.logging
+        )
+        return action

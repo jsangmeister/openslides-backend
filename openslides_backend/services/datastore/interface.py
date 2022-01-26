@@ -34,6 +34,12 @@ class BaseDatastoreService(Protocol):
     # The key of this dictionary is a stringified FullQualifiedId or FullQualifiedField
     locked_fields: Dict[str, CollectionFieldLock]
 
+    def clone(self) -> "DatastoreService":
+        """
+        Creates a fresh copy of the adapter. The same engine and logging is used (although this is irrelevant since they
+        are stateless), attributes like locked_fields are not copied.
+        """
+
     def get_database_context(self) -> ContextManager[None]:
         ...
 

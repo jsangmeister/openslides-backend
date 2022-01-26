@@ -11,9 +11,8 @@ from openslides_backend.models.base import Model, model_registry
 from openslides_backend.models.fields import BaseTemplateField
 from openslides_backend.services.auth.interface import AuthenticationService
 from openslides_backend.services.datastore.interface import Collection, DatastoreService
-from openslides_backend.services.datastore.with_database_context import (
-    with_database_context,
-)
+from openslides_backend.services.message_bus.redis_adapter import RedisAdapter
+from openslides_backend.services.thread_manager.thread_manager_service import ThreadManagerService
 from openslides_backend.shared.exceptions import DatastoreException
 from openslides_backend.shared.filters import FilterOperator
 from openslides_backend.shared.interfaces.event import Event, EventType
@@ -41,6 +40,8 @@ class BaseSystemTestCase(TestCase):
     datastore: DatastoreService
     vote_service: TestVoteService
     media: Any  # Any is needed because it is mocked and has magic methods
+    message_bus: RedisAdapter
+    thread_manager: ThreadManagerService
     client: Client
     anon_client: Client
 
@@ -58,6 +59,10 @@ class BaseSystemTestCase(TestCase):
         self.vote_service = cast(TestVoteService, self.services.vote())
         self.datastore = self.services.datastore()
         self.datastore.truncate_db()
+        self.message_bus = cast(RedisAdapter, self.services.message_bus())
+        self.message_bus.redis.flushall()
+        self.thread_manager = self.services.thread_manager()
+        self.thread_manager.reset()
 
         self.created_fqids = set()
         self.create_model(
@@ -210,7 +215,6 @@ class BaseSystemTestCase(TestCase):
                     f"Invalid data for {fqid}/{field_name}: " + e.message
                 )
 
-    @with_database_context
     def get_model(self, fqid: str) -> Dict[str, Any]:
         model = self.datastore.get(
             get_fqid(fqid),
@@ -260,7 +264,6 @@ class BaseSystemTestCase(TestCase):
                     f"Field {field.own_field_name}: Value {instance.get(field.own_field_name, 'None')} is not equal default value {field.default}.",
                 )
 
-    @with_database_context
     def assert_model_count(self, collection: str, meeting_id: int, count: int) -> None:
         db_count = self.datastore.count(
             Collection(collection),

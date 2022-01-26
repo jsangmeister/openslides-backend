@@ -34,6 +34,7 @@ from ...shared.patterns import (
 from . import commands
 from .handle_datastore_errors import handle_datastore_errors, raise_datastore_error
 from .interface import BaseDatastoreService, Engine, LockResult, PartialModel
+from .with_database_context import with_database_context
 
 
 class DatastoreAdapter(BaseDatastoreService):
@@ -47,11 +48,15 @@ class DatastoreAdapter(BaseDatastoreService):
     locked_fields: Dict[str, CollectionFieldLock]
 
     def __init__(self, engine: Engine, logging: LoggingModule, env: Env) -> None:
+        self.logging = logging
         self.logger = logging.getLogger(__name__)
         self.engine = engine
         self.reader = injector.get(Reader)
         self.locked_fields = {}
         self.env = env
+
+    def clone(self) -> "DatastoreAdapter":
+        return DatastoreAdapter(self.engine, self.logging)
 
     def retrieve(self, command: commands.Command) -> Any:
         """
@@ -82,6 +87,7 @@ class DatastoreAdapter(BaseDatastoreService):
     def get_database_context(self) -> ContextManager[None]:
         return self.reader.get_database_context()
 
+    @with_database_context
     @handle_datastore_errors
     def get(
         self,
@@ -118,6 +124,7 @@ class DatastoreAdapter(BaseDatastoreService):
             )
         return response
 
+    @with_database_context
     @handle_datastore_errors
     def get_many(
         self,
@@ -165,6 +172,7 @@ class DatastoreAdapter(BaseDatastoreService):
                 result[collection][instance_id] = value
         return result
 
+    @with_database_context
     @handle_datastore_errors
     def get_all(
         self,
@@ -201,6 +209,7 @@ class DatastoreAdapter(BaseDatastoreService):
                 self.update_locked_fields(collection_field, instance_position)
         return response
 
+    @with_database_context
     @handle_datastore_errors
     def filter(
         self,
@@ -248,6 +257,7 @@ class DatastoreAdapter(BaseDatastoreService):
             "count", collection, filter, get_deleted_models, lock_result
         )
 
+    @with_database_context
     @handle_datastore_errors
     def _aggregate(
         self,
@@ -295,6 +305,7 @@ class DatastoreAdapter(BaseDatastoreService):
             "max", collection, filter, field, get_deleted_models, lock_result
         )
 
+    @with_database_context
     @handle_datastore_errors
     def _minmax(
         self,

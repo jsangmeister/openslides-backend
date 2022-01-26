@@ -43,7 +43,12 @@ from .relations.relation_manager import RelationManager, RelationUpdates
 from .relations.typing import FieldUpdateElement, ListUpdateElement
 from .util.action_type import ActionType
 from .util.assert_belongs_to_meeting import assert_belongs_to_meeting
-from .util.typing import ActionData, ActionResultElement, ActionResults
+from .util.typing import (
+    ActionData,
+    ActionResultElement,
+    ActionResults,
+    OnSuccessCallable,
+)
 
 
 class SchemaProvider(type):
@@ -88,6 +93,7 @@ class Action(BaseAction, metaclass=SchemaProvider):
     schema_validator: Callable[[Dict[str, Any]], None]
     is_singular: bool = False
     action_type: ActionType = ActionType.PUBLIC
+    threaded: bool = False
     permission: Optional[Union[Permission, OrganizationManagementLevel]] = None
     permission_model: Optional[Model] = None
     permission_id: Optional[str] = None
@@ -611,7 +617,7 @@ class Action(BaseAction, metaclass=SchemaProvider):
             self.write_requests.append(write_request)
         return action_results
 
-    def get_on_success(self, action_data: ActionData) -> Callable[[], None]:
+    def get_on_success(self, action_data: ActionData) -> OnSuccessCallable:
         """
         Can be overridden by actions to return a cleanup method to execute
         after the result was successfully written to the DS.

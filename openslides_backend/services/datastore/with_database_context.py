@@ -1,14 +1,14 @@
 from functools import wraps
 from typing import Callable
 
-from .adapter import DatastoreAdapter
+from .interface import DatastoreService
 
 
 def with_database_context(method: Callable) -> Callable:
     @wraps(method)
     def wrapper(self, *args, **kwargs):  # type: ignore
         assert hasattr(self, "datastore") and isinstance(
-            self.datastore, DatastoreAdapter
+            self.datastore, DatastoreService
         ), "with_database_context can only decorate instance methods for classes with a datastore attribute"
         with self.datastore.get_database_context():
             return method(self, *args, **kwargs)

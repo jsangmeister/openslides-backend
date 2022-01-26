@@ -7,7 +7,7 @@ from .actions_map import actions_map
 
 
 def register_action(
-    name: str, action_type: ActionType = ActionType.PUBLIC
+    name: str, action_type: ActionType = ActionType.PUBLIC, threaded: bool = False
 ) -> Callable[[Type[Action]], Type[Action]]:
     """
     Decorator to be used for action classes. Registers the class so that it can
@@ -17,6 +17,7 @@ def register_action(
     def wrapper(clazz: Type[Action]) -> Type[Action]:
         _register_action(name, clazz)
         clazz.action_type = action_type
+        clazz.threaded = threaded
         return clazz
 
     return wrapper

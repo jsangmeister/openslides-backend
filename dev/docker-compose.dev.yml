@@ -26,10 +26,12 @@ services:
             - AUTH_HOST=auth
         depends_on:
             - writer
+            - redis
         networks:
             - datastore
             - postgresql
             - auth
+            - redis
     reader:
         build:
             context: "https://github.com/OpenSlides/openslides-datastore-service.git#main"

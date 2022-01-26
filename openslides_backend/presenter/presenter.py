@@ -130,8 +130,7 @@ class PresenterHandler(BaseHandler):
                 user_id,
             )
             presenter_instance.validate()
-            with self.datastore.get_database_context():
-                result = presenter_instance.get_result()
+            result = presenter_instance.get_result()
             response.append(result)
         self.logger.debug("Presenter data ready.")
         return response, access_token
