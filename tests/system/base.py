@@ -12,7 +12,9 @@ from openslides_backend.models.fields import BaseTemplateField
 from openslides_backend.services.auth.interface import AuthenticationService
 from openslides_backend.services.datastore.interface import Collection, DatastoreService
 from openslides_backend.services.message_bus.redis_adapter import RedisAdapter
-from openslides_backend.services.thread_manager.thread_manager_service import ThreadManagerService
+from openslides_backend.services.thread_manager.thread_manager_service import (
+    ThreadManagerService,
+)
 from openslides_backend.shared.exceptions import DatastoreException
 from openslides_backend.shared.filters import FilterOperator
 from openslides_backend.shared.interfaces.event import Event, EventType

@@ -1,17 +1,19 @@
-from threading import Lock
-from time import sleep
-from typing import Any, Dict, Optional, Tuple, cast
 from concurrent.futures import Future
+from threading import Lock
+from typing import Any, Dict, Optional, Tuple
 
 from openslides_backend.action.action import Action
 from openslides_backend.action.util.register import register_action
 from openslides_backend.action.util.typing import ActionData, ActionResults
 from openslides_backend.http.views.action_view import ActionView
-from openslides_backend.services.thread_manager.thread_manager_service import (
-    ThreadProgressState,
-    ThreadManagerService,
+from openslides_backend.services.message_bus.redis_adapter import (
+    THREAD_UPDATE_REQUEST_TOPIC,
+    THREAD_UPDATE_RESPONSE_TOPIC,
 )
-from openslides_backend.services.message_bus.redis_adapter import RedisAdapter, THREAD_UPDATE_REQUEST_TOPIC, THREAD_UPDATE_RESPONSE_TOPIC
+from openslides_backend.services.thread_manager.thread_manager_service import (
+    ThreadManagerService,
+    ThreadProgressState,
+)
 from openslides_backend.shared.interfaces.write_request import WriteRequest
 from tests.system.base import ADMIN_PASSWORD, ADMIN_USERNAME, Response
 from tests.system.util import create_action_test_application, get_route_path

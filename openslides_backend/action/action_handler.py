@@ -298,7 +298,8 @@ class ActionHandler(BaseHandler):
     ) -> Type[Action]:
         ActionClass = actions_map.get(action_name)
         if ActionClass is None or (
-            ActionClass.action_type == ActionType.BACKEND_INTERNAL and not self.env.is_dev_mode()
+            ActionClass.action_type == ActionType.BACKEND_INTERNAL
+            and not self.env.is_dev_mode()
         ):
             raise View400Exception(f"Action {action_name} does not exist.")
         return ActionClass

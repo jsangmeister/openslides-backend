@@ -1,7 +1,7 @@
 from concurrent.futures import Future, ThreadPoolExecutor
 from enum import Enum
-from threading import Thread
 from multiprocessing import Process
+from threading import Thread
 from typing import Any, Callable, Dict, NoReturn, Optional, TypedDict
 from uuid import uuid4
 
@@ -29,12 +29,14 @@ class ThreadManagerService:
         self.shutdown_info: ShutdownInfo = {"shutdown": False}
         self.threads = {}
         self.executor = ThreadPoolExecutor()
-    
+
     def print(self, msg: str) -> None:
         print(f"{hex(id(self))}: {msg}")
 
     def start_listener(self) -> None:
-        self.listener_thread = Thread(target=self._start_listener, args=[self.shutdown_info], daemon=True)
+        self.listener_thread = Thread(
+            target=self._start_listener, args=[self.shutdown_info], daemon=True
+        )
         self.listener_thread.start()
 
     def _start_listener(self, shutdown_info: ShutdownInfo) -> NoReturn:
@@ -88,7 +90,7 @@ class ThreadManagerService:
         if not self.listener_thread:
             self.start_listener()
         return uuid
-    
+
     def reset(self) -> None:
         self.threads.clear()
         self.shutdown_info["shutdown"] = True
