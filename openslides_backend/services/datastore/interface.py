@@ -39,8 +39,7 @@ class BaseDatastoreService(Protocol):
     locked_fields: Dict[str, CollectionFieldLock]
 
     @abstractmethod
-    def get_database_context(self) -> ContextManager[None]:
-        ...
+    def get_database_context(self) -> ContextManager[None]: ...
 
     @abstractmethod
     def get(
@@ -50,8 +49,7 @@ class BaseDatastoreService(Protocol):
         position: Optional[int] = None,
         get_deleted_models: DeletedModelsBehaviour = DeletedModelsBehaviour.NO_DELETED,
         lock_result: LockResult = True,
-    ) -> PartialModel:
-        ...
+    ) -> PartialModel: ...
 
     @abstractmethod
     def get_many(
@@ -60,8 +58,7 @@ class BaseDatastoreService(Protocol):
         position: Optional[int] = None,
         get_deleted_models: DeletedModelsBehaviour = DeletedModelsBehaviour.NO_DELETED,
         lock_result: bool = True,
-    ) -> Dict[Collection, Dict[int, PartialModel]]:
-        ...
+    ) -> Dict[Collection, Dict[int, PartialModel]]: ...
 
     @abstractmethod
     def get_all(
@@ -70,8 +67,7 @@ class BaseDatastoreService(Protocol):
         mapped_fields: List[str],
         get_deleted_models: DeletedModelsBehaviour = DeletedModelsBehaviour.NO_DELETED,
         lock_result: bool = True,
-    ) -> Dict[int, PartialModel]:
-        ...
+    ) -> Dict[int, PartialModel]: ...
 
     @abstractmethod
     def filter(
@@ -81,8 +77,7 @@ class BaseDatastoreService(Protocol):
         mapped_fields: List[str],
         get_deleted_models: DeletedModelsBehaviour = DeletedModelsBehaviour.NO_DELETED,
         lock_result: bool = True,
-    ) -> Dict[int, PartialModel]:
-        ...
+    ) -> Dict[int, PartialModel]: ...
 
     @abstractmethod
     def exists(
@@ -91,8 +86,7 @@ class BaseDatastoreService(Protocol):
         filter: Filter,
         get_deleted_models: DeletedModelsBehaviour = DeletedModelsBehaviour.NO_DELETED,
         lock_result: bool = True,
-    ) -> bool:
-        ...
+    ) -> bool: ...
 
     @abstractmethod
     def count(
@@ -101,8 +95,7 @@ class BaseDatastoreService(Protocol):
         filter: Filter,
         get_deleted_models: DeletedModelsBehaviour = DeletedModelsBehaviour.NO_DELETED,
         lock_result: bool = True,
-    ) -> int:
-        ...
+    ) -> int: ...
 
     @abstractmethod
     def min(
@@ -112,8 +105,7 @@ class BaseDatastoreService(Protocol):
         field: str,
         get_deleted_models: DeletedModelsBehaviour = DeletedModelsBehaviour.NO_DELETED,
         lock_result: bool = True,
-    ) -> Optional[int]:
-        ...
+    ) -> Optional[int]: ...
 
     @abstractmethod
     def max(
@@ -123,50 +115,41 @@ class BaseDatastoreService(Protocol):
         field: str,
         get_deleted_models: DeletedModelsBehaviour = DeletedModelsBehaviour.NO_DELETED,
         lock_result: bool = True,
-    ) -> Optional[int]:
-        ...
+    ) -> Optional[int]: ...
 
     @abstractmethod
     def history_information(
         self, fqids: List[str]
-    ) -> Dict[str, List[HistoryInformation]]:
-        ...
+    ) -> Dict[str, List[HistoryInformation]]: ...
 
     @abstractmethod
-    def reserve_ids(self, collection: Collection, amount: int) -> Sequence[int]:
-        ...
+    def reserve_ids(self, collection: Collection, amount: int) -> Sequence[int]: ...
 
     @abstractmethod
-    def reserve_id(self, collection: Collection) -> int:
-        ...
+    def reserve_id(self, collection: Collection) -> int: ...
 
     @abstractmethod
-    def write(self, write_requests: Union[List[WriteRequest], WriteRequest]) -> None:
-        ...
+    def write(
+        self, write_requests: Union[List[WriteRequest], WriteRequest]
+    ) -> None: ...
 
     @abstractmethod
-    def write_action_worker(self, write_request: WriteRequest) -> None:
-        ...
+    def write_without_events(self, write_request: WriteRequest) -> None: ...
 
     @abstractmethod
-    def truncate_db(self) -> None:
-        ...
+    def truncate_db(self) -> None: ...
 
     @abstractmethod
-    def is_deleted(self, fqid: FullQualifiedId) -> bool:
-        ...
+    def is_deleted(self, fqid: FullQualifiedId) -> bool: ...
 
     @abstractmethod
-    def reset(self, hard: bool = True) -> None:
-        ...
+    def reset(self, hard: bool = True) -> None: ...
 
     @abstractmethod
-    def get_everything(self) -> Dict[Collection, Dict[int, PartialModel]]:
-        ...
+    def get_everything(self) -> Dict[Collection, Dict[int, PartialModel]]: ...
 
     @abstractmethod
-    def delete_history_information(self) -> None:
-        ...
+    def delete_history_information(self) -> None: ...
 
 
 class DatastoreService(BaseDatastoreService):
@@ -178,14 +161,13 @@ class DatastoreService(BaseDatastoreService):
     def get(
         self,
         fqid: FullQualifiedId,
-        mapped_fields: Optional[List[str]] = None,
+        mapped_fields: List[str],
         position: Optional[int] = None,
         get_deleted_models: DeletedModelsBehaviour = DeletedModelsBehaviour.NO_DELETED,
         lock_result: LockResult = True,
         use_changed_models: bool = True,
         raise_exception: bool = True,
-    ) -> PartialModel:
-        ...
+    ) -> PartialModel: ...
 
     @abstractmethod
     def get_many(
@@ -195,20 +177,18 @@ class DatastoreService(BaseDatastoreService):
         get_deleted_models: DeletedModelsBehaviour = DeletedModelsBehaviour.NO_DELETED,
         lock_result: bool = True,
         use_changed_models: bool = True,
-    ) -> Dict[Collection, Dict[int, PartialModel]]:
-        ...
+    ) -> Dict[Collection, Dict[int, PartialModel]]: ...
 
     @abstractmethod
     def filter(
         self,
         collection: Collection,
         filter: Filter,
-        mapped_fields: List[str] = [],
+        mapped_fields: List[str],
         get_deleted_models: DeletedModelsBehaviour = DeletedModelsBehaviour.NO_DELETED,
         lock_result: bool = True,
         use_changed_models: bool = True,
-    ) -> Dict[int, PartialModel]:
-        ...
+    ) -> Dict[int, PartialModel]: ...
 
     @abstractmethod
     def exists(
@@ -218,8 +198,7 @@ class DatastoreService(BaseDatastoreService):
         get_deleted_models: DeletedModelsBehaviour = DeletedModelsBehaviour.NO_DELETED,
         lock_result: bool = True,
         use_changed_models: bool = True,
-    ) -> bool:
-        ...
+    ) -> bool: ...
 
     @abstractmethod
     def count(
@@ -229,8 +208,7 @@ class DatastoreService(BaseDatastoreService):
         get_deleted_models: DeletedModelsBehaviour = DeletedModelsBehaviour.NO_DELETED,
         lock_result: bool = True,
         use_changed_models: bool = True,
-    ) -> int:
-        ...
+    ) -> int: ...
 
     @abstractmethod
     def min(
@@ -241,8 +219,7 @@ class DatastoreService(BaseDatastoreService):
         get_deleted_models: DeletedModelsBehaviour = DeletedModelsBehaviour.NO_DELETED,
         lock_result: bool = True,
         use_changed_models: bool = True,
-    ) -> Optional[int]:
-        ...
+    ) -> Optional[int]: ...
 
     @abstractmethod
     def max(
@@ -253,8 +230,7 @@ class DatastoreService(BaseDatastoreService):
         get_deleted_models: DeletedModelsBehaviour = DeletedModelsBehaviour.NO_DELETED,
         lock_result: bool = True,
         use_changed_models: bool = True,
-    ) -> Optional[int]:
-        ...
+    ) -> Optional[int]: ...
 
     @abstractmethod
     def is_deleted(self, fqid: FullQualifiedId) -> bool:
@@ -265,8 +241,7 @@ class DatastoreService(BaseDatastoreService):
     @abstractmethod
     def apply_changed_model(
         self, fqid: FullQualifiedId, instance: PartialModel, replace: bool = False
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 class Engine(Protocol):
@@ -277,5 +252,4 @@ class Engine(Protocol):
     @abstractmethod
     def retrieve(
         self, endpoint: str, data: Optional[str]
-    ) -> Tuple[Union[bytes, str], int]:
-        ...
+    ) -> Tuple[Union[bytes, str], int]: ...

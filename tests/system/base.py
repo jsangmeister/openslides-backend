@@ -7,7 +7,6 @@ import simplejson as json
 from datastore.shared.util import DeletedModelsBehaviour, is_reserved_field
 from fastjsonschema.exceptions import JsonSchemaException
 
-from openslides_backend.action import action_worker
 from openslides_backend.models.base import Model, model_registry
 from openslides_backend.services.auth.interface import AuthenticationService
 from openslides_backend.services.datastore.interface import DatastoreService
@@ -32,7 +31,7 @@ from openslides_backend.shared.util import (
 )
 from tests.util import AuthData, Client, Response
 
-from .util import TestVoteService, remove_files_from_vote_decrypt_service
+from .util import TestVoteService
 
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin"
@@ -63,7 +62,6 @@ class BaseSystemTestCase(TestCase):
         self.vote_service = cast(TestVoteService, self.services.vote())
         self.vote_service.datastore = self.datastore
         self.set_thread_watch_timeout(-1)
-        remove_files_from_vote_decrypt_service()
 
         self.created_fqids = set()
         self.create_model(
@@ -81,6 +79,7 @@ class BaseSystemTestCase(TestCase):
             ONE_ORGANIZATION_FQID,
             {
                 "name": "OpenSlides Organization",
+                "default_language": "en",
                 "user_ids": [1],
             },
         )
@@ -92,11 +91,17 @@ class BaseSystemTestCase(TestCase):
             # Login and save copy of auth data for all following tests
             self.client.login(ADMIN_USERNAME, ADMIN_PASSWORD)
             BaseSystemTestCase.auth_data = deepcopy(self.client.auth_data)
-        self.vote_service.clear_all()
         self.anon_client = self.create_client()
 
-    def set_thread_watch_timeout(self, thread_watch_timeout: float) -> None:
-        action_worker.THREAD_WATCH_TIMEOUT = thread_watch_timeout
+    def set_thread_watch_timeout(self, timeout: float) -> None:
+        """
+        Set the timeout for the thread watch.
+        timeout > 0: Waits `timeout` seconds before continuing the action in the action worker.
+        timeout = 0: Continues the action in the action worker immediately.
+        timeout = -1: Waits indefinetly for the action to finish, does not start an action worker
+        timeout = -2: Deacticates threading alltogether. The action is executed in the main thread.
+        """
+        self.app.env.vars["OPENSLIDES_BACKEND_THREAD_WATCH_TIMEOUT"] = str(timeout)
 
     def tearDown(self) -> None:
         if thread := self.__class__.get_thread_by_name("action_worker"):

@@ -4,6 +4,7 @@ from ....models.models import ListOfSpeakers, Speaker
 from ....permissions.permissions import Permissions
 from ....shared.exceptions import ActionException
 from ....shared.filters import And, FilterOperator
+from ....shared.patterns import fqid_from_collection_and_id
 from ...generics.update import UpdateAction
 from ...util.default_schema import DefaultSchema
 from ...util.register import register_action
@@ -34,7 +35,7 @@ class ListOfSpeakersReAddLastAction(UpdateAction):
                 FilterOperator("list_of_speakers_id", "=", list_of_speakers_id),
                 FilterOperator("meeting_id", "=", meeting_id),
             ),
-            mapped_fields=["end_time", "user_id", "weight", "point_of_order"],
+            mapped_fields=["end_time", "meeting_user_id", "weight", "point_of_order"],
         )
         if not speakers:
             raise ActionException(
@@ -59,20 +60,23 @@ class ListOfSpeakersReAddLastAction(UpdateAction):
                         last_speaker_id, last_speaker = speaker_id, speaker
         if last_speaker is None:
             raise ActionException("There is no last speaker that can be re-added.")
-        elif last_speaker.get("point_of_order"):
-            raise ActionException(
-                "The last speaker is a point of order speaker and cannot be re-added."
-            )
         assert isinstance(lowest_weight, int)
 
         for speaker in speakers.values():
             if (
                 speaker.get("end_time") is None
-                and speaker["user_id"] == last_speaker["user_id"]
-                and not speaker.get("point_of_order")
+                and speaker["meeting_user_id"] == last_speaker["meeting_user_id"]
+                and bool(speaker.get("point_of_order"))
+                == bool(last_speaker.get("point_of_order"))
             ):
+                meeting_user = self.datastore.get(
+                    fqid_from_collection_and_id(
+                        "meeting_user", last_speaker["meeting_user_id"]
+                    ),
+                    ["user_id"],
+                )
                 raise ActionException(
-                    f"User {last_speaker['user_id']} is already on the list of speakers."
+                    f"User {meeting_user['user_id']} is already on the list of speakers."
                 )
 
         # Return new instance to the generic part of the UpdateAction.

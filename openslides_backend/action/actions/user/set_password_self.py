@@ -7,10 +7,13 @@ from ....shared.patterns import fqid_from_collection_and_id
 from ...generics.update import UpdateAction
 from ...util.default_schema import DefaultSchema
 from ...util.register import register_action
+from .password_mixins import ClearSessionsMixin
 
 
 @register_action("user.set_password_self")
-class UserSetPasswordSelf(UpdateAction, CheckForArchivedMeetingMixin):
+class UserSetPasswordSelf(
+    UpdateAction, CheckForArchivedMeetingMixin, ClearSessionsMixin
+):
     """
     Action to update the own password.
     """
@@ -29,11 +32,14 @@ class UserSetPasswordSelf(UpdateAction, CheckForArchivedMeetingMixin):
 
         db_instance = self.datastore.get(
             fqid_from_collection_and_id(self.model.collection, self.user_id),
-            ["password"],
+            ["password", "saml_id"],
             lock_result=False,
         )
-
-        if not self.auth.is_equals(old_pw, db_instance["password"]):
+        if db_instance.get("saml_id"):
+            raise ActionException(
+                f"user {db_instance['saml_id']} is a Single Sign On user and has no local OpenSlides password."
+            )
+        if not self.auth.is_equal(old_pw, db_instance["password"]):
             raise ActionException("Wrong password")
 
         instance["password"] = self.auth.hash(new_pw)

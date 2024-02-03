@@ -178,10 +178,7 @@ class ActionHandler(BaseHandler):
         for i, element in enumerate(payload):
             with make_span(self.env, f"parse action: { element['action'] }"):
                 action_name = element["action"]
-                if (
-                    actions_map.get(action_name)
-                    and actions_map.get(action_name).is_singular  # type: ignore
-                ):
+                if (action := actions_map.get(action_name)) and action.is_singular:
                     if action_name in action_name_list:
                         exception = ActionException(
                             f"Action {action_name} may not appear twice in one request."
@@ -215,14 +212,16 @@ class ActionHandler(BaseHandler):
     ) -> Tuple[Optional[WriteRequest], Optional[ActionResults]]:
         action_name = action_payload_element["action"]
         ActionClass = actions_map.get(action_name)
-        if ActionClass is None or (
-            not self.env.is_dev_mode()
-            and (
+        # Actions cannot be accessed in the following three cases:
+        # - they do not exist
+        # - they are not public and the request is not internal
+        # - they are backend internal and the backend is not in dev mode
+        if (
+            ActionClass is None
+            or (ActionClass.action_type != ActionType.PUBLIC and not self.internal)
+            or (
                 ActionClass.action_type == ActionType.BACKEND_INTERNAL
-                or (
-                    not self.internal
-                    and ActionClass.action_type == ActionType.STACK_INTERNAL
-                )
+                and not self.env.is_dev_mode()
             )
         ):
             raise View400Exception(f"Action {action_name} does not exist.")

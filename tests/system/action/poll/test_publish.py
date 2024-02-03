@@ -2,10 +2,11 @@ from typing import Any, Dict
 
 from openslides_backend.models.models import Poll
 from openslides_backend.permissions.permissions import Permissions
-from tests.system.action.base import BaseActionTestCase
+
+from .base_poll_test import BasePollTestCase
 
 
-class PollPublishActionTest(BaseActionTestCase):
+class PollPublishActionTest(BasePollTestCase):
     def setUp(self) -> None:
         super().setUp()
         self.test_models: Dict[str, Dict[str, Any]] = {

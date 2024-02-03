@@ -149,8 +149,10 @@ class EmailUtils:
                 message.set_content(contentplain)
             message.add_alternative(content, subtype="html")
         else:
-            message.set_content(content) if content else message.set_content(
-                contentplain
+            (
+                message.set_content(content)
+                if content
+                else message.set_content(contentplain)
             )
 
         message["From"] = from_
@@ -192,8 +194,7 @@ class EmailCheckMixin(Action):
             instance[self.check_email_field] = instance[self.check_email_field].strip()
             if not EmailUtils.check_email(instance[self.check_email_field]):
                 raise ActionException(f"{self.check_email_field} must be valid email.")
-        instance = super().update_instance(instance)
-        return instance
+        return super().update_instance(instance)
 
 
 class EmailSenderCheckMixin(Action):

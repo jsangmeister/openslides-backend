@@ -10,6 +10,11 @@ class PersonalNoteCreateActionTest(BaseActionTestCase):
             "meeting/110": {
                 "name": "name_meeting_110",
                 "is_active_in_organization_id": 1,
+                "meeting_user_ids": [1],
+            },
+            "meeting_user/1": {
+                "meeting_id": 110,
+                "user_id": 1,
             },
             "motion/23": {"meeting_id": 110},
             "user/1": {"meeting_ids": [110]},
@@ -23,7 +28,7 @@ class PersonalNoteCreateActionTest(BaseActionTestCase):
         self.assert_status_code(response, 200)
         model = self.get_model("personal_note/1")
         assert model.get("star") is True
-        assert model.get("user_id") == 1
+        assert model.get("meeting_user_id") == 1
         assert model.get("meeting_id") == 110
 
     def test_create_empty_data(self) -> None:
@@ -52,10 +57,11 @@ class PersonalNoteCreateActionTest(BaseActionTestCase):
                 "personal_note/1": {
                     "star": True,
                     "note": "blablabla",
-                    "user_id": 1,
+                    "meeting_user_id": 1,
                     "content_object_id": "motion/23",
                     "meeting_id": 110,
                 },
+                "meeting_user/1": {"meeting_id": 110, "user_id": 1},
             }
         )
         response = self.request(
@@ -67,7 +73,7 @@ class PersonalNoteCreateActionTest(BaseActionTestCase):
         )
         self.assert_status_code(response, 400)
         self.assertIn(
-            "(user_id, content_object_id) must be unique.",
+            "(meeting_user_id, content_object_id) must be unique.",
             response.json["message"],
         )
 

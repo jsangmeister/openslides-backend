@@ -349,14 +349,14 @@ class DatastoreAdapter(BaseDatastoreService):
     ) -> None:
         if position is None:
             raise DatastoreException("Invalid response from datastore.")
-        fields = []
-        filter_visitor(filter, lambda fo: fields.append(fo.field))
+        fields = set()
+        filter_visitor(filter, lambda fo: fields.add(fo.field))
         if "meeting_id" not in fields:
             self.logger.debug(
                 "Locking a collection field with a filter which does not contain meeting_id!"
             )
         if additional_field:
-            fields.append(additional_field)
+            fields.add(additional_field)
         for field in fields:
             cf = collectionfield_from_collection_and_field(collection, field)
             self.update_locked_fields(cf, {"position": position, "filter": filter})
@@ -445,10 +445,10 @@ class DatastoreAdapter(BaseDatastoreService):
         )
         self.retrieve(command)
 
-    def write_action_worker(self, write_request: WriteRequest) -> None:
-        command = commands.WriteActionWorker(write_requests=[write_request])
+    def write_without_events(self, write_request: WriteRequest) -> None:
+        command = commands.WriteWithoutEvents(write_requests=[write_request])
         self.logger.debug(
-            f"Start WRITE_ACTION_WORKER request to datastore with the following data: "
+            f"Start WRITE_WITHOUT_EVENTS request to datastore with the following data: "
             f"Write request: {write_request}"
         )
         self.retrieve(command)

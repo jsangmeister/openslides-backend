@@ -1,5 +1,7 @@
 from collections import defaultdict
-from typing import Any, Dict, Iterable, List, Optional, Set, Union, cast
+from typing import Any, Dict, Iterable, List, Optional, Set
+
+from openslides_backend.shared.exceptions import ActionException
 
 from ....models.models import Group
 from ....permissions.permissions import Permissions
@@ -31,11 +33,21 @@ class GroupDeleteAction(DeleteAction):
     def update_instance(self, instance: Dict[str, Any]) -> Dict[str, Any]:
         instance = super().update_instance(instance)
         group = self.datastore.get(
-            fqid_from_collection_and_id("group", instance["id"]), []
+            fqid_from_collection_and_id("group", instance["id"]),
+            [
+                "mediafile_access_group_ids",
+                "mediafile_inherited_access_group_ids",
+                "meeting_user_ids",
+                "meeting_id",
+            ],
         )
+        if len(group.get("meeting_user_ids", [])) and not self.is_meeting_deleted(
+            group["meeting_id"]
+        ):
+            raise ActionException("You cannot delete a group with users.")
         self.mediafile_ids: List[int] = list(
-            (set(group.get("mediafile_access_group_ids", set())) or set())
-            | (set(group.get("mediafile_inherited_access_group_ids", set()) or set()))
+            set(group.get("mediafile_access_group_ids", []))
+            | set(group.get("mediafile_inherited_access_group_ids", []))
         )
         return instance
 
@@ -92,11 +104,7 @@ class GroupDeleteAction(DeleteAction):
                 EventType.Update,
                 fqid_from_collection_and_id("group", group_id),
                 list_fields={
-                    "add": {
-                        "mediafile_inherited_access_group_ids": cast(
-                            List[Union[int, str]], mediafile_ids
-                        )
-                    },
+                    "add": {"mediafile_inherited_access_group_ids": mediafile_ids},
                     "remove": {},
                 },
             )
