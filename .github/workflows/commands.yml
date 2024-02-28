@@ -1,0 +1,66 @@
+name: Commands for the openslides-automation
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  merge-meta-repo:
+    name: Recursively merge the main branch
+    runs-on: ubuntu-latest
+    if: github.event.issue.pull_request != '' && contains(github.event.comment.body, '\merge')
+
+    steps:
+        - uses: actions/checkout@v4
+        
+        - name: Checkout PR
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          run: gh pr checkout ${{ github.event.issue.number }}
+
+        - name: Update submodule
+          run: git submodule update --init --recursive
+
+        - name: Set git credentials
+          run: |
+            git config --global user.name openslides-automation
+            git config --global user.email openslides-automation@users.noreply.github.com
+        
+        - name: Merge main branch
+          id: merge
+          run: git merge --no-edit main || echo "result=1" >> $GITHUB_OUTPUT
+        
+        - name: Get submodule path
+          id: path
+          run: git config --file .gitmodules --list >> $GITHUB_OUTPUT
+        
+        - name: Determine whether the conflicts are too complex to continue
+          id: conflicts
+          if: steps.merge.outputs.result != ''
+          run: |
+            [[ $(git diff --name-only --diff-filter=U) = '${{ steps.path.outputs.submodule.openslides-meta.path }}' ]] || echo "result=1" >> $GITHUB_OUTPUT
+        
+        - name: Write failure comment
+          if: steps.merge.outputs.result != ''
+          uses: actions/github-script@v6
+          with:
+            script: |
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: 'Merging failed since the conflicts are too complex to continue. Please resolve the conflicts manually.'
+              })
+
+        - name: Merge meta repo
+          if: steps.merge.outputs.result == ''
+          working-directory: ${{ steps.path.outputs.submodule.openslides-meta.path }}
+          run: |
+            gh pr checkout $(gh pr list --search $(git rev-parse HEAD) --json number --jq ".[0].number")
+            git fetch origin main
+            git merge --no-edit origin/main
+            git push
+        
+        - name: Finish merge & push result
+          if: steps.merge.outputs.result == ''
+          run: git add . && git merge --continue --no-edit && git push
+            
