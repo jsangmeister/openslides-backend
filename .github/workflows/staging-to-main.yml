@@ -17,6 +17,11 @@ jobs:
       with:
         ref: main
     
+    - run: echo "${{ github }}"
+
+    - run: git config user.name ${{ github.event.commits.author.username }}
+    - run: git config user.email ${{ github.event.commits.author.email }}
+    
     - name: Cherry-pick new commit
       run: git fetch origin && (git cherry-pick ${{ github.sha }} || (git add . && git cherry-pick --continue))
 
