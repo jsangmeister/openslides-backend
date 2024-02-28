@@ -25,7 +25,16 @@ jobs:
     - run: git config user.email openslides-automation@users.noreply.github.com
     
     - name: Cherry-pick new commit
-      run: git fetch origin && (git cherry-pick ${{ github.sha }} || (git add . && git cherry-pick --continue))
+      id: cherry-pick
+      run: |
+        git fetch origin
+        git cherry-pick ${{ github.sha }}
+        error=$?
+        if [ $error -ne 0 ]; then
+          echo "error=1" >> $GITHUB_OUTPUT
+          git add .
+          git cherry-pick --continue
+        fi
 
     # - name: Generate access token
     #   uses: tibdex/github-app-token@v2
@@ -43,7 +52,7 @@ jobs:
         branch: apply/commit-${{ github.sha }}
         delete-branch: true
         title: ${{ github.event.commits[0].message }}
-        body: "Triggered by commit [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})"
+        body: "Triggered by commit [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})\n\n${{ steps.cherry-pick.outputs.error && 'There were conflicts during the cherry-pick. These were commited without any resolving. Please resolve them manually and push the result to this branch before merging.' || 'The cherry-pick was successful without any conflicts. You should be able to simply merge this PR.' }}"
         reviewers: ${{ github.event.commits[0].author.username }}
         assignees: ${{ github.event.commits[0].author.username }}
         labels: staging-port
