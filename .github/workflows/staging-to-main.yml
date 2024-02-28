@@ -21,8 +21,8 @@ jobs:
         GITHUB_CONTEXT: ${{ toJson(github) }}
       run: echo "$GITHUB_CONTEXT"
 
-    - run: git config user.name ${{ github.event.commits.author.username }}
-    - run: git config user.email ${{ github.event.commits.author.email }}
+    - run: git config user.name openslides-automation
+    - run: git config user.email openslides-automation@users.noreply.github.com
     
     - name: Cherry-pick new commit
       run: git fetch origin && (git cherry-pick ${{ github.sha }} || (git add . && git cherry-pick --continue))
@@ -43,8 +43,8 @@ jobs:
         branch: apply/commit-${{ github.sha }}
         delete-branch: true
         title: ${{ github.event.commits.message }}
-        body: "Triggered by commit [${{ github.sha }}](https://github.com/${{ github.repository_owner }}/${{ github.repository.name }}/commit/${{ github.sha }})"
-        reviewers: ${{ github.event.commits.author }}
-        assignees: ${{ github.event.commits.author }}
+        body: "Triggered by commit [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})"
+        reviewers: ${{ github.event.commits.author.username }}
+        assignees: ${{ github.event.commits.author.username }}
         labels: staging-port
         milestone: 4
