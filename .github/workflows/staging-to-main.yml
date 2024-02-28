@@ -17,7 +17,9 @@ jobs:
       with:
         ref: main
     
-    - run: echo "${{ github }}"
+    - env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+      run: echo "$GITHUB_CONTEXT"
 
     - run: git config user.name ${{ github.event.commits.author.username }}
     - run: git config user.email ${{ github.event.commits.author.email }}
