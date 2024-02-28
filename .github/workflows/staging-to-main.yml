@@ -39,12 +39,12 @@ jobs:
       if: ${{ always() }}
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        commit-message: ${{ github.event.commits.message }}
+        commit-message: ${{ github.event.commits[0].message }}
         branch: apply/commit-${{ github.sha }}
         delete-branch: true
-        title: ${{ github.event.commits.message }}
+        title: ${{ github.event.commits[0].message }}
         body: "Triggered by commit [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})"
-        reviewers: ${{ github.event.commits.author.username }}
-        assignees: ${{ github.event.commits.author.username }}
+        reviewers: ${{ github.event.commits[0].author.username }}
+        assignees: ${{ github.event.commits[0].author.username }}
         labels: staging-port
         milestone: 4
