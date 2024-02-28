@@ -1,0 +1,50 @@
+name: Copy staging commits to main
+
+on:
+  push:
+    branches:
+      - 'staging/**'
+      
+
+jobs:
+  create-pr-for-main:
+    name: Create PR against main branch
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout main
+      uses: actions/checkout@v4
+      with:
+        ref: main
+    
+    - env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+      run: echo "$GITHUB_CONTEXT"
+
+    - run: git config user.name openslides-automation
+    - run: git config user.email openslides-automation@users.noreply.github.com
+    
+    - name: Cherry-pick new commit
+      run: git fetch origin && (git cherry-pick ${{ github.sha }} || (git add . && git cherry-pick --continue))
+
+    # - name: Generate access token
+    #   uses: tibdex/github-app-token@v2
+    #   id: generate-token
+    #   with:
+    #     app_id: ${{ secrets.AUTOMATION_APP_ID }}
+    #     private_key: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+
+    - name: Create or update PR
+      uses: peter-evans/create-pull-request@v6
+      if: ${{ always() }}
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: ${{ github.event.commits.message }}
+        branch: apply/commit-${{ github.sha }}
+        delete-branch: true
+        title: ${{ github.event.commits.message }}
+        body: "Triggered by commit [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})"
+        reviewers: ${{ github.event.commits.author.username }}
+        assignees: ${{ github.event.commits.author.username }}
+        labels: staging-port
+        milestone: 4
