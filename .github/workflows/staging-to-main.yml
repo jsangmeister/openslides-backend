@@ -18,7 +18,7 @@ jobs:
         ref: main
     
     - name: Cherry-pick new commit
-      run: git cherry-pick ${{ github.sha }}
+      run: git fetch origin && git cherry-pick ${{ github.sha }}
 
     # - name: Generate access token
     #   uses: tibdex/github-app-token@v2
